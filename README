@@ -9,5 +9,5 @@ To use:
 Then clone this repo and run:
 * python harvester.py
 
-[1]:http://pypi.python.org/pypi/virtualenv
+[1]http://pypi.python.org/pypi/virtualenv
 

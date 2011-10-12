@@ -45,6 +45,7 @@ import urllib2
 import json
 import gzip
 import StringIO
+from io import BytesIO
 from optparse import OptionParser
 
 class HarvesterOptions(OptionParser):
@@ -126,14 +127,26 @@ class Harvester():
     def handle_log(self, testdata):
         print "Handling log: %s" % testdata["buildername"]
         response = urllib2.urlopen(testdata["logurl"])
-        logdata = response.read()
+        logdata = gzip.GzipFile(fileobj=BytesIO(response.read()))
 
-        outfilename = testdata["logurl"].replace("_","-").replace("/","_").replace(":","")
+        buildername = testdata.get('buildername', 'None')
+        data = str('logurl: %s\nbuildername: %s\n%s' % (testdata['logurl'],
+                                                        buildername,
+                                                        unicode(logdata.read(), errors='ignore')))
+        logdata.close()
+
+        outfilename = '%s-%s-%s-%s-%d-%s.txt.gz' % (testdata['tree'],
+                                                    testdata['os'],
+                                                    testdata['platform'],
+                                                    testdata['buildtype'],
+                                                    testdata['builddate'],
+                                                    testdata['test'])
+
         outpath = os.path.join(self.log_dest, outfilename)
         print "Log written to: %s" % outpath
 
-        with open(outpath,'w') as outfile:
-            outfile.write(logdata)
+        with gzip.open(outpath,'wb') as outfile:
+            outfile.write(data)
 
         outpath_log = outpath[:outpath.rfind('.')] + ".json"
         with open(outpath_log,'w') as outfile:
@@ -141,11 +154,6 @@ class Harvester():
 
         if self.dump:
             print "------ BEGINNING LOG DUMP -----"
-            if testdata['logurl'].endswith('gz'):
-                logfile = StringIO(logdata)
-                data = gzip.GzipFile(fileobj=logfile)
-            else:
-                data = logdata
             print data
             print "------ ENDING LOG DUMP -------"
 
